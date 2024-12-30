@@ -55,7 +55,7 @@ getArches 'friendica'
 cat <<-EOH
 # This file is generated via https://github.com/friendica/docker/blob/$(fileCommit "$self")/$self
 
-Maintainers: Friendica <info@friendi.ca> (@friendica), Philipp Holzer <admin@philipp.info> (@nupplaphil), @ne20002
+Maintainers: Friendica <info@friendi.ca> (@friendica), Philipp Holzer <admin@philipp.info> (@nupplaphil), S. Brusch (@ne20002)
 GitRepo: https://github.com/friendica/docker.git
 GitFetch: refs/heads/stable
 EOH
