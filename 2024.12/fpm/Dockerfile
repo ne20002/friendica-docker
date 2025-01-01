@@ -1,5 +1,5 @@
 # DO NOT EDIT: created by update.sh from Dockerfile-debian.template
-FROM php:8.2-apache-bullseye
+FROM php:8.2-fpm-bullseye
 
 # entrypoint.sh and cron.sh dependencies
 RUN set -ex; \
@@ -157,30 +157,54 @@ RUN set -ex; \
 
 VOLUME /var/www/html
 
-RUN set -ex;\
-    a2enmod rewrite remoteip ;\
-    {\
-     echo RemoteIPHeader X-Real-IP ;\
-     echo RemoteIPTrustedProxy 10.0.0.0/8 ;\
-     echo RemoteIPTrustedProxy 172.16.0.0/12 ;\
-     echo RemoteIPTrustedProxy 192.168.0.0/16 ;\
-    } > /etc/apache2/conf-available/remoteip.conf;\
-    a2enconf remoteip
 
 # 39 = LOG_PID | LOG_ODELAY | LOG_CONS | LOG_PERROR
 ENV FRIENDICA_SYSLOG_FLAGS 39
-ENV FRIENDICA_VERSION "2024.09-rc"
-ENV FRIENDICA_ADDONS "2024.09-rc"
+ENV FRIENDICA_VERSION "2024.12"
+ENV FRIENDICA_ADDONS "2024.12"
+ENV FRIENDICA_DOWNLOAD_SHA256 "37bb0fad549c955fced70059b62cd4f3364e344363011a2d054f1b6c425cfb9e"
+ENV FRIENDICA_DOWNLOAD_ADDONS_SHA256 "fbbece635dfaec9d2365581aaafb913cec00128e5815087c9d9b8a46d8dc7ed5"
 
 RUN set -ex; \
     fetchDeps=" \
         gnupg \
     "; \
     apt-get update; \
-    apt-get install -y --no-install-recommends $fetchDeps;
+    apt-get install -y --no-install-recommends $fetchDeps; \
+    \
+    export GNUPGHOME="$(mktemp -d)"; \
+    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys 08656443618E6567A39524083EE197EF3F9E4287; \
+    \
+    curl -fsSL -o friendica-full-${FRIENDICA_VERSION}.tar.gz \
+        "https://files.friendi.ca/friendica-full-${FRIENDICA_VERSION}.tar.gz"; \
+    curl -fsSL -o friendica-full-${FRIENDICA_VERSION}.tar.gz.asc \
+        "https://files.friendi.ca/friendica-full-${FRIENDICA_VERSION}.tar.gz.asc"; \
+    gpg --batch --verify friendica-full-${FRIENDICA_VERSION}.tar.gz.asc friendica-full-${FRIENDICA_VERSION}.tar.gz; \
+    echo "${FRIENDICA_DOWNLOAD_SHA256} *friendica-full-${FRIENDICA_VERSION}.tar.gz" | sha256sum -c; \
+    tar -xzf friendica-full-${FRIENDICA_VERSION}.tar.gz -C /usr/src/; \
+    rm friendica-full-${FRIENDICA_VERSION}.tar.gz friendica-full-${FRIENDICA_VERSION}.tar.gz.asc; \
+    mv -f /usr/src/friendica-full-${FRIENDICA_VERSION}/ /usr/src/friendica; \
+    chmod 777 /usr/src/friendica/view/smarty3; \
+    \
+    curl -fsSL -o friendica-addons-${FRIENDICA_ADDONS}.tar.gz \
+            "https://files.friendi.ca/friendica-addons-${FRIENDICA_ADDONS}.tar.gz"; \
+    curl -fsSL -o friendica-addons-${FRIENDICA_ADDONS}.tar.gz.asc \
+            "https://files.friendi.ca/friendica-addons-${FRIENDICA_ADDONS}.tar.gz.asc"; \
+    gpg --batch --verify friendica-addons-${FRIENDICA_ADDONS}.tar.gz.asc friendica-addons-${FRIENDICA_ADDONS}.tar.gz; \
+    echo "${FRIENDICA_DOWNLOAD_ADDONS_SHA256} *friendica-addons-${FRIENDICA_ADDONS}.tar.gz" | sha256sum -c; \
+    mkdir -p /usr/src/friendica/proxy; \
+    mkdir -p /usr/src/friendica/addon; \
+    tar -xzf friendica-addons-${FRIENDICA_ADDONS}.tar.gz -C /usr/src/friendica/addon --strip-components=1; \
+    rm friendica-addons-${FRIENDICA_ADDONS}.tar.gz friendica-addons-${FRIENDICA_ADDONS}.tar.gz.asc; \
+    \
+    gpgconf --kill all; \
+    rm -rf "$GNUPGHOME"; \
+    \
+    apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false $fetchDeps; \
+    rm -rf /var/lib/apt/lists/*
 
 COPY *.sh upgrade.exclude /
 COPY config/* /usr/src/friendica/config/
 
-ENTRYPOINT ["/entrypoint-dev.sh"]
-CMD ["apache2-foreground"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["php-fpm"]
