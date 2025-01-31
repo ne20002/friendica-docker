@@ -15,8 +15,8 @@ if (expr "$1" : "apache" 1>/dev/null || [ "$1" = "php-fpm" ]) && [ "${FRIENDICA_
 
     echo "Download sources for ${FRIENDICA_VERSION} (Addon: ${FRIENDICA_ADDONS})"
 
-    # Removing the whole directory first
-    rm -fr /usr/src/friendica
+    # Removing the previous sources (except config) first
+    find /usr/src/friendica -mindepth 1 -maxdepth 1 ! -name 'config' -exec rm -rf {} +
     export GNUPGHOME="$(mktemp -d)"
 
     gpg --batch --logger-fd=1 --no-tty --quiet --keyserver keyserver.ubuntu.com --recv-keys 08656443618E6567A39524083EE197EF3F9E4287
@@ -28,6 +28,8 @@ if (expr "$1" : "apache" 1>/dev/null || [ "$1" = "php-fpm" ]) && [ "${FRIENDICA_
 
     tar -xzf friendica-full-${FRIENDICA_VERSION}.tar.gz -C /usr/src/
     rm friendica-full-${FRIENDICA_VERSION}.tar.gz friendica-full-${FRIENDICA_VERSION}.tar.gz.asc
+    cp -an /usr/src/friendica/config/* /usr/src/friendica-full-${FRIENDICA_VERSION}/config/    
+    rm -fr /usr/src/friendica
     mv -f /usr/src/friendica-full-${FRIENDICA_VERSION}/ /usr/src/friendica
     echo "Core sources (${FRIENDICA_VERSION}) extracted"
 
