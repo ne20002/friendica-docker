@@ -13,7 +13,7 @@ RUN set -ex; \
         tini \
     ;
 
-ENV GOSU_VERSION=1.17
+ENV GOSU_VERSION=1.19
 RUN set -eux; \
 # save list of currently installed packages for later so we can clean up
 	savedAptMark="$(apt-mark showmanual)"; \
